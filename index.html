@@ -1,0 +1,1737 @@
+<!DOCTYPE html>
+<html lang="ja">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>毎日クエスト - 日課をRPGのように楽しむアプリ</title>
+    <!-- Tailwind CDN -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    <!-- Lucide Icons -->
+    <script src="https://unpkg.com/lucide@latest"></script>
+    <style>
+        body {
+            font-family: 'Helvetica Neue', Arial, sans-serif;
+            background-color: #f3f4f6;
+        }
+        .quest-container {
+            max-height: 70vh;
+            overflow-y: auto;
+        }
+        .one-time-quest {
+            border-left: 4px solid #a78bfa;
+        }
+    </style>
+</head>
+<body>
+    <div id="app" class="flex flex-col items-center p-4 min-h-screen">
+        <!-- ヘッダー -->
+        <div class="w-full max-w-md bg-blue-600 text-white p-4 rounded-t-lg shadow-md">
+            <div class="flex justify-between items-center">
+                <div>
+                    <h1 class="text-xl font-bold">毎日クエスト</h1>
+                    <p class="text-sm">今日のミッションをクリアしよう！</p>
+                </div>
+                <div class="flex flex-wrap items-center gap-1">
+                    <div id="gold-display" class="bg-yellow-400 text-black px-2 py-1 rounded-full text-xs flex items-center cursor-pointer" onclick="toggleModal('shop-modal')">
+                        <i data-lucide="trophy" class="w-4 h-4 mr-1"></i>
+                        <span id="gold-amount">50</span>G
+                    </div>
+                    <div class="bg-red-500 text-white px-2 py-1 rounded-full text-xs flex items-center">
+                        <i data-lucide="heart" class="w-4 h-4 mr-1"></i>
+                        <span id="streak-count">3</span>日連続
+                    </div>
+                    <div id="achievements-display" class="bg-purple-500 text-white px-2 py-1 rounded-full text-xs flex items-center cursor-pointer" onclick="toggleModal('achievements-modal')">
+                        <i data-lucide="star" class="w-4 h-4 mr-1"></i>
+                        <span id="achievements-count">0</span>
+                    </div>
+                    <div id="inventory-display" class="bg-green-500 text-white px-2 py-1 rounded-full text-xs flex items-center cursor-pointer" onclick="toggleModal('inventory-modal')" style="display: none;">
+                        <i data-lucide="activity" class="w-4 h-4 mr-1"></i>
+                        <span id="inventory-count">0</span>
+                    </div>
+                    <div id="rewards-display" class="bg-pink-500 text-white px-2 py-1 rounded-full text-xs flex items-center cursor-pointer" onclick="toggleModal('rewards-modal')">
+                        <i data-lucide="heart" class="w-4 h-4 mr-1"></i>
+                        ご褒美
+                    </div>
+                </div>
+            </div>
+        </div>
+        
+        <!-- キャラクター情報 -->
+        <div class="w-full max-w-md bg-white p-4 shadow-md mb-4">
+            <div class="flex items-center mb-2">
+                <div class="w-12 h-12 bg-blue-500 rounded-full flex items-center justify-center text-white font-bold mr-3">
+                    <span id="level-display">1</span>
+                </div>
+                <div class="flex-1">
+                    <h2 class="font-bold" id="character-name">勇者</h2>
+                    <div class="flex items-center">
+                        <span class="text-xs mr-2">Lv.<span id="level-number">1</span></span>
+                        <div class="flex-1 bg-gray-200 rounded-full h-2">
+                            <div id="exp-bar" class="bg-blue-500 h-2 rounded-full" style="width: 0%"></div>
+                        </div>
+                        <span class="text-xs ml-2"><span id="current-exp">0</span>/<span id="max-exp">100</span></span>
+                    </div>
+                </div>
+            </div>
+            
+            <div class="flex justify-between text-center text-sm">
+                <div>
+                    <p class="font-bold text-blue-600" id="completion-rate">0%</p>
+                    <p class="text-gray-500">達成率</p>
+                </div>
+                <div>
+                    <p class="font-bold text-green-600" id="completed-count">0</p>
+                    <p class="text-gray-500">完了</p>
+                </div>
+                <div>
+                    <p class="font-bold text-red-600" id="remaining-count">0</p>
+                    <p class="text-gray-500">残り</p>
+                </div>
+                <div class="cursor-pointer" onclick="toggleModal('stats-modal')">
+                    <p class="font-bold text-purple-600" id="total-completed">0</p>
+                    <p class="text-gray-500">累計</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- クエスト追加ボタン -->
+        <div class="w-full max-w-md mb-4 flex">
+            <button class="bg-green-500 text-white py-2 px-4 rounded-l-lg flex-1 flex items-center justify-center" onclick="toggleModal('add-quest-modal')">
+                <span class="mr-2">+</span> 詳細設定
+            </button>
+            <button class="bg-blue-500 text-white py-2 px-4 rounded-r-lg flex-1 flex items-center justify-center" onclick="toggleModal('quick-add-modal')">
+                <span class="mr-2">⚡</span> クイック追加
+            </button>
+        </div>
+        
+        <!-- クエストリスト -->
+        <div class="w-full max-w-md bg-white rounded-lg shadow-md overflow-hidden mb-4">
+            <!-- 朝のクエスト -->
+            <div class="border-b">
+                <div class="bg-yellow-100 p-2">
+                    <h3 class="font-bold text-sm flex items-center">
+                        <i data-lucide="sun" class="w-4 h-4 mr-2 text-yellow-600"></i>
+                        朝のクエスト
+                    </h3>
+                </div>
+                <div id="morning-quests" class="quest-container">
+                    <!-- クエストは JavaScript で動的に追加されます -->
+                </div>
+            </div>
+
+            <!-- 昼のクエスト -->
+            <div class="border-b">
+                <div class="bg-blue-100 p-2">
+                    <h3 class="font-bold text-sm flex items-center">
+                        <i data-lucide="sun" class="w-4 h-4 mr-2 text-blue-600"></i>
+                        昼のクエスト
+                    </h3>
+                </div>
+                <div id="day-quests" class="quest-container">
+                    <!-- クエストは JavaScript で動的に追加されます -->
+                </div>
+            </div>
+
+            <!-- 夜のクエスト -->
+            <div class="border-b">
+                <div class="bg-indigo-100 p-2">
+                    <h3 class="font-bold text-sm flex items-center">
+                        <i data-lucide="moon" class="w-4 h-4 mr-2 text-indigo-600"></i>
+                        夜のクエスト
+                    </h3>
+                </div>
+                <div id="night-quests" class="quest-container">
+                    <!-- クエストは JavaScript で動的に追加されます -->
+                </div>
+            </div>
+            
+            <!-- 一日中のクエスト -->
+            <div>
+                <div class="bg-green-100 p-2">
+                    <h3 class="font-bold text-sm flex items-center">
+                        <i data-lucide="activity" class="w-4 h-4 mr-2 text-green-600"></i>
+                        一日中のクエスト
+                    </h3>
+                </div>
+                <div id="all-day-quests" class="quest-container">
+                    <!-- クエストは JavaScript で動的に追加されます -->
+                </div>
+            </div>
+        </div>
+        
+        <!-- モーダル: クエスト完了 -->
+        <div id="complete-modal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50" style="display: none;">
+            <div class="bg-white rounded-lg p-6 max-w-sm w-full text-center">
+                <div class="mb-4">
+                    <div class="w-16 h-16 rounded-full bg-green-100 flex items-center justify-center mx-auto mb-2">
+                        <div class="text-green-600 text-3xl">✓</div>
+                    </div>
+                    <h3 class="font-bold text-xl mb-1">クエスト達成！</h3>
+                    <p class="text-gray-600" id="completed-quest-title"></p>
+                </div>
+                
+                <div class="flex justify-around mb-4">
+                    <div>
+                        <div class="flex items-center justify-center">
+                            <i data-lucide="star" class="w-4 h-4 text-yellow-500 mr-1"></i>
+                            <span class="font-bold" id="completed-exp">+0 EXP</span>
+                        </div>
+                        <p class="text-xs text-gray-500">経験値</p>
+                    </div>
+                    <div>
+                        <div class="flex items-center justify-center">
+                            <i data-lucide="trophy" class="w-4 h-4 text-yellow-500 mr-1"></i>
+                            <span class="font-bold" id="completed-gold">+0 G</span>
+                        </div>
+                        <p class="text-xs text-gray-500">ゴールド</p>
+                    </div>
+                </div>
+                
+                <button class="bg-blue-600 text-white py-2 px-4 rounded-lg w-full" onclick="closeModal('complete-modal')">
+                    OK
+                </button>
+            </div>
+        </div>
+        
+        <!-- モーダル: レベルアップ -->
+        <div id="level-up-modal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50" style="display: none;">
+            <div class="bg-white rounded-lg p-6 max-w-sm w-full text-center">
+                <div class="mb-4">
+                    <div class="w-20 h-20 rounded-full bg-yellow-100 flex items-center justify-center mx-auto mb-2">
+                        <div class="text-yellow-600 text-3xl">↑</div>
+                    </div>
+                    <h3 class="font-bold text-xl mb-1">レベルアップ！</h3>
+                    <p class="text-gray-600">Lv.<span id="old-level">1</span> → Lv.<span id="new-level">2</span></p>
+                </div>
+                
+                <div class="bg-gray-100 p-3 rounded-lg mb-4">
+                    <p class="text-sm font-bold mb-1">ボーナス獲得！</p>
+                    <div class="flex justify-around">
+                        <div>
+                            <p class="font-bold text-red-600">+20</p>
+                            <p class="text-xs text-gray-500">体力回復</p>
+                        </div>
+                        <div>
+                            <p class="font-bold text-yellow-600">+30G</p>
+                            <p class="text-xs text-gray-500">ボーナス</p>
+                        </div>
+                    </div>
+                </div>
+                
+                <button class="bg-blue-600 text-white py-2 px-4 rounded-lg w-full" onclick="closeModal('level-up-modal')">
+                    OK
+                </button>
+            </div>
+        </div>
+        
+        <!-- モーダル: クエスト追加 -->
+        <div id="add-quest-modal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50" style="display: none;">
+            <div class="bg-white rounded-lg p-6 max-w-sm w-full">
+                <h3 class="font-bold text-xl mb-4 text-center">新しいクエストを追加</h3>
+                
+                <div class="mb-4">
+                    <div class="flex items-center mb-2">
+                        <label class="text-sm font-medium text-gray-700">クエストタイプ</label>
+                    </div>
+                    
+                    <div class="flex space-x-2 mb-4">
+                        <div id="daily-quest-option" class="flex-1 p-3 rounded-lg border cursor-pointer flex items-center justify-center bg-blue-100 border-blue-500" onclick="selectQuestType('daily')">
+                            <div class="text-center">
+                                <div class="font-bold mb-1">日課クエスト</div>
+                                <p class="text-xs text-gray-600">毎日リセット</p>
+                            </div>
+                        </div>
+                        
+                        <div id="one-time-quest-option" class="flex-1 p-3 rounded-lg border cursor-pointer flex items-center justify-center bg-gray-100 border-gray-300" onclick="selectQuestType('one-time')">
+                            <div class="text-center">
+                                <div class="font-bold mb-1">単発クエスト</div>
+                                <p class="text-xs text-gray-600">1回きり</p>
+                            </div>
+                        </div>
+                    </div>
+                    
+                    <label class="block text-sm font-medium text-gray-700 mb-1">クエスト名</label>
+                    <input type="text" id="quest-title" class="w-full p-2 border rounded-lg" placeholder="例：15分間の読書">
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">時間帯</label>
+                    <select id="quest-time" class="w-full p-2 border rounded-lg">
+                        <option value="朝">朝</option>
+                        <option value="昼">昼</option>
+                        <option value="夜">夜</option>
+                        <option value="一日中">一日中</option>
+                    </select>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">アイコン</label>
+                    <select id="quest-icon" class="w-full p-2 border rounded-lg">
+                        <option value="sun">太陽</option>
+                        <option value="book">本</option>
+                        <option value="activity">運動</option>
+                        <option value="coffee">飲み物</option>
+                        <option value="moon">月</option>
+                        <option value="heart">ハート</option>
+                        <option value="star" selected>星</option>
+                        <option value="trophy">トロフィー</option>
+                    </select>
+                </div>
+                
+                <div class="mb-4">
+                    <div class="flex items-center mb-2">
+                        <label class="text-sm font-medium text-gray-700">報酬自動設定</label>
+                        <div class="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-1 rounded-full">おすすめ</div>
+                    </div>
+                    
+                    <div class="bg-gray-100 p-3 rounded-lg mb-4">
+                        <p class="text-sm text-gray-600 mb-2">
+                            クエスト名から自動で適切な報酬を設定します。「30分の運動」「難しい課題」などの表現で報酬が変わります。
+                        </p>
+                        <div class="text-xs text-gray-500">
+                            <p>・「難しい」「挑戦」→報酬アップ</p>
+                            <p>・「1時間」「2時間」→時間で調整</p>
+                            <p>・「運動」「勉強」「読書」など→活動タイプで調整</p>
+                        </div>
+                    </div>
+                    
+                    <div class="flex justify-between items-center">
+                        <span class="text-sm font-medium text-gray-700">手動で設定する</span>
+                        <label class="inline-flex items-center cursor-pointer">
+                            <input type="checkbox" id="manual-rewards" class="sr-only peer" onchange="toggleManualRewards()">
+                            <div class="relative w-11 h-6 bg-gray-200 peer-focus:outline-none rounded-full peer peer-checked:after:translate-x-full peer-checked:after:border-white after:content-[''] after:absolute after:top-[2px] after:left-[2px] after:bg-white after:border-gray-300 after:border after:rounded-full after:h-5 after:w-5 after:transition-all peer-checked:bg-blue-600"></div>
+                        </label>
+                    </div>
+                </div>
+                
+                <div id="manual-rewards-section" class="grid grid-cols-2 gap-4 mb-6" style="display: none;">
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">経験値</label>
+                        <input type="number" id="quest-exp" class="w-full p-2 border rounded-lg" value="15" min="1" max="100">
+                    </div>
+                    <div>
+                        <label class="block text-sm font-medium text-gray-700 mb-1">ゴールド</label>
+                        <input type="number" id="quest-gold" class="w-full p-2 border rounded-lg" value="5" min="1" max="50">
+                    </div>
+                </div>
+                
+                <div class="flex space-x-2">
+                    <button class="bg-gray-500 text-white py-2 px-4 rounded-lg flex-1" onclick="closeModal('add-quest-modal')">
+                        キャンセル
+                    </button>
+                    <button class="bg-blue-600 text-white py-2 px-4 rounded-lg flex-1" onclick="addNewQuest()">
+                        追加する
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- モーダル: クイック追加 -->
+        <div id="quick-add-modal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50" style="display: none;">
+            <div class="bg-white rounded-lg p-6 max-w-sm w-full">
+                <h3 class="font-bold text-lg mb-4 text-center">クエストをさくっと追加</h3>
+                <p class="text-sm text-gray-600 mb-4">
+                    クエスト名を入力するだけでEXPとゴールドは自動設定されます！
+                </p>
+                
+                <div class="mb-4">
+                    <input type="text" id="quick-quest-title" class="w-full p-3 border rounded-lg text-center" placeholder="例：30分の読書を毎日する">
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">時間帯</label>
+                    <select id="quick-quest-time" class="w-full p-2 border rounded-lg">
+                        <option value="朝">朝</option>
+                        <option value="昼">昼</option>
+                        <option value="夜">夜</option>
+                        <option value="一日中">一日中</option>
+                    </select>
+                </div>
+                
+                <div class="mb-4">
+                    <div class="flex space-x-2">
+                        <div id="quick-daily-option" class="flex-1 p-3 rounded-lg border cursor-pointer flex items-center justify-center bg-blue-100 border-blue-500" onclick="selectQuickQuestType('daily')">
+                            <div class="text-center">
+                                <div class="font-bold mb-1">日課</div>
+                                <p class="text-xs text-gray-600">毎日リセット</p>
+                            </div>
+                        </div>
+                        
+                        <div id="quick-one-time-option" class="flex-1 p-3 rounded-lg border cursor-pointer flex items-center justify-center bg-gray-100 border-gray-300" onclick="selectQuickQuestType('one-time')">
+                            <div class="text-center">
+                                <div class="font-bold mb-1">単発</div>
+                                <p class="text-xs text-gray-600">1回きり</p>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+                
+                <div class="flex space-x-2">
+                    <button class="bg-gray-500 text-white py-2 px-4 rounded-lg flex-1" onclick="closeModal('quick-add-modal')">
+                        キャンセル
+                    </button>
+                    <button class="bg-blue-600 text-white py-2 px-4 rounded-lg flex-1" onclick="addQuickQuest()">
+                        追加する
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- モーダル: ショップ -->
+        <div id="shop-modal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50" style="display: none;">
+            <div class="bg-white rounded-lg p-6 max-w-sm w-full max-h-[80vh] overflow-auto">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-xl">冒険者の店</h3>
+                    <div class="bg-yellow-400 text-black px-2 py-1 rounded-full text-xs flex items-center">
+                        <i data-lucide="trophy" class="w-4 h-4 mr-1"></i>
+                        <span id="shop-gold">50</span>G
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <div class="bg-blue-100 p-3 rounded-lg mb-3">
+                        <p class="text-sm text-blue-800">
+                            ゴールドを使って役立つアイテムを購入しましょう！
+                        </p>
+                    </div>
+                    
+                    <h4 class="font-bold text-lg mb-2">消費アイテム</h4>
+                    <div id="consumable-items-container">
+                        <!-- ショップアイテムはJavaScriptで動的に生成 -->
+                    </div>
+                    
+                    <h4 class="font-bold text-lg mb-2 mt-4">永続アイテム</h4>
+                    <div id="permanent-items-container">
+                        <!-- 永続アイテムはJavaScriptで動的に生成 -->
+                    </div>
+                </div>
+                
+                <button class="bg-blue-600 text-white py-2 px-4 rounded-lg w-full" onclick="closeModal('shop-modal')">
+                    閉じる
+                </button>
+            </div>
+        </div>
+        
+        <!-- モーダル: インベントリ -->
+        <div id="inventory-modal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50" style="display: none;">
+            <div class="bg-white rounded-lg p-6 max-w-sm w-full">
+                <h3 class="font-bold text-xl mb-4">アイテムバッグ</h3>
+                
+                <div id="inventory-container" class="mb-4">
+                    <!-- インベントリアイテムはJavaScriptで動的に生成 -->
+                </div>
+                
+                <div id="skills-container" class="mb-4">
+                    <!-- スキル一覧はJavaScriptで動的に生成 -->
+                </div>
+                
+                <button class="bg-blue-600 text-white py-2 px-4 rounded-lg w-full" onclick="closeModal('inventory-modal')">
+                    閉じる
+                </button>
+            </div>
+        </div>
+        
+        <!-- モーダル: ご褒美 -->
+        <div id="rewards-modal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50" style="display: none;">
+            <div class="bg-white rounded-lg p-6 max-w-sm w-full max-h-[80vh] overflow-auto">
+                <div class="flex justify-between items-center mb-4">
+                    <h3 class="font-bold text-xl">現実のご褒美</h3>
+                    <div class="bg-yellow-400 text-black px-2 py-1 rounded-full text-xs flex items-center">
+                        <i data-lucide="trophy" class="w-4 h-4 mr-1"></i>
+                        <span id="rewards-gold">50</span>G
+                    </div>
+                </div>
+                
+                <div class="mb-4">
+                    <div class="bg-pink-100 p-3 rounded-lg mb-3">
+                        <p class="text-sm text-pink-800">
+                            ゴールドを使って現実の世界でのご褒美を獲得しましょう！
+                        </p>
+                    </div>
+                    
+                    <div id="available-rewards-container">
+                        <!-- 獲得可能なご褒美はJavaScriptで動的に生成 -->
+                    </div>
+                    
+                    <div id="claimed-rewards-container" class="mt-4">
+                        <!-- 獲得済みのご褒美はJavaScriptで動的に生成 -->
+                    </div>
+                    
+                    <button class="bg-pink-500 text-white py-2 px-4 rounded-lg w-full mt-4" onclick="toggleModal('add-reward-modal')">
+                        新しいご褒美を追加
+                    </button>
+                </div>
+                
+                <button class="bg-blue-600 text-white py-2 px-4 rounded-lg w-full" onclick="closeModal('rewards-modal')">
+                    閉じる
+                </button>
+            </div>
+        </div>
+        
+        <!-- モーダル: ご褒美追加 -->
+        <div id="add-reward-modal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50" style="display: none;">
+            <div class="bg-white rounded-lg p-6 max-w-sm w-full">
+                <h3 class="font-bold text-xl mb-4 text-center">新しいご褒美を追加</h3>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">ご褒美の名前</label>
+                    <input type="text" id="reward-name" class="w-full p-2 border rounded-lg" placeholder="例：お気に入りのケーキを食べる">
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">説明（任意）</label>
+                    <textarea id="reward-description" class="w-full p-2 border rounded-lg" placeholder="例：週末に行きたいケーキ屋さんでご褒美タイム" rows="3"></textarea>
+                </div>
+                
+                <div class="mb-4">
+                    <label class="block text-sm font-medium text-gray-700 mb-1">
+                        必要ゴールド
+                    </label>
+                    <input type="number" id="reward-price" class="w-full p-2 border rounded-lg" value="50" min="1" max="1000">
+                    <p class="text-xs text-gray-500 mt-1">
+                        価値や難易度に応じて設定しましょう。高すぎると達成しづらく、低すぎるとやる気が出ないかも。
+                    </p>
+                </div>
+                
+                <div class="flex space-x-2">
+                    <button class="bg-gray-500 text-white py-2 px-4 rounded-lg flex-1" onclick="closeModal('add-reward-modal')">
+                        キャンセル
+                    </button>
+                    <button class="bg-pink-500 text-white py-2 px-4 rounded-lg flex-1" onclick="addReward()">
+                        追加する
+                    </button>
+                </div>
+            </div>
+        </div>
+        
+        <!-- モーダル: 統計情報 -->
+        <div id="stats-modal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50" style="display: none;">
+            <div class="bg-white rounded-lg p-6 max-w-sm w-full max-h-[80vh] overflow-auto">
+                <h3 class="font-bold text-xl mb-4 text-center">クエスト達成履歴</h3>
+                
+                <div class="mb-6">
+                    <h4 class="font-bold text-lg mb-2">総合統計</h4>
+                    <div class="bg-gray-100 p-4 rounded-lg">
+                        <div class="flex justify-between mb-2">
+                            <span>累計達成クエスト数:</span>
+                            <span class="font-bold" id="stats-total-completed">0</span>
+                        </div>
+                        <div class="flex justify-between mb-2">
+                            <span>達成した称号:</span>
+                            <span class="font-bold" id="stats-achievements">0</span>
+                        </div>
+                        <div class="flex justify-between">
+                            <span>現在のレベル:</span>
+                            <span class="font-bold" id="stats-level">1</span>
+                        </div>
+                    </div>
+                </div>
+                
+                <div id="quest-stats-container" class="mb-6">
+                    <!-- クエスト別統計はJavaScriptで動的に生成 -->
+                </div>
+                
+                <div id="daily-stats-container" class="mb-6">
+                    <!-- 日別統計はJavaScriptで動的に生成 -->
+                </div>
+                
+                <button class="bg-blue-600 text-white py-2 px-4 rounded-lg w-full" onclick="closeModal('stats-modal')">
+                    閉じる
+                </button>
+            </div>
+        </div>
+        
+        <!-- モーダル: 称号一覧 -->
+        <div id="achievements-modal" class="fixed inset-0 flex items-center justify-center bg-black bg-opacity-50 z-50" style="display: none;">
+            <div class="bg-white rounded-lg p-6 max-w-sm w-full max-h-[80vh] overflow-auto">
+                <h3 class="font-bold text-xl mb-4 text-center">獲得した称号</h3>
+                
+                <div id="achievements-container" class="mb-6">
+                    <!-- 称号一覧はJavaScriptで動的に生成 -->
+                </div>
+                
+                <div class="bg-blue-100 p-4 rounded-lg mb-4">
+                    <h4 class="font-bold mb-2 text-blue-800">獲得可能な称号</h4>
+                    <ul class="text-sm">
+                        <li class="mb-1">🔰 冒険者見習い - 最初のクエストを達成</li>
+                        <li class="mb-1">🥉 一人前の冒険者 - 10個のクエストを達成</li>
+                        <li class="mb-1">🥈 熟練冒険者 - 50個のクエストを達成</li>
+                        <li class="mb-1">🥇 伝説の勇者 - 100個のクエストを達成</li>
+                    </ul>
+                </div>
+                
+                <button class="bg-blue-600 text-white py-2 px-4 rounded-lg w-full" onclick="closeModal('achievements-modal')">
+                    閉じる
+                </button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // ***** データモデルとユーティリティ関数 *****
+        
+        // ユーザーデータの初期状態
+        let userData = {
+            name: "勇者",
+            level: 1,
+            exp: 0,
+            maxExp: 100,
+            gold: 50,
+            streak: 3,
+            health: 80,
+            totalCompletedQuests: 0,
+            achievements: [],
+            stats: {
+                dailyCompletion: {},
+                questCompletion: {}
+            },
+            inventory: [],
+            skills: [],
+            rewards: []
+        };
+        
+        // クエストデータの初期状態
+        let questsData = [
+            { id: 1, title: "朝の瞑想", icon: "sun", completed: false, exp: 20, gold: 5, timeOfDay: "朝", isOneTime: false },
+            { id: 2, title: "15分間の読書", icon: "book", completed: false, exp: 15, gold: 3, timeOfDay: "昼", isOneTime: false },
+            { id: 3, title: "30分の運動", icon: "activity", completed: false, exp: 25, gold: 8, timeOfDay: "昼", isOneTime: false },
+            { id: 4, title: "水を2リットル飲む", icon: "coffee", completed: false, exp: 10, gold: 2, timeOfDay: "一日中", isOneTime: false },
+            { id: 5, title: "就寝前のストレッチ", icon: "moon", completed: false, exp: 15, gold: 3, timeOfDay: "夜", isOneTime: false }
+        ];
+        
+        // ショップアイテムデータ
+        const shopItems = [
+            {
+                id: 'skip_quest',
+                name: 'スキップチケット',
+                description: 'クエストを1つ自動完了させる',
+                price: 30,
+                icon: 'magic-wand',
+                type: 'consumable',
+                effect: () => {
+                    // 未完了のクエストから1つ選んで完了させる処理
+                    const incompletedQuests = questsData.filter(q => !q.completed);
+                    if (incompletedQuests.length > 0) {
+                        completeQuest(incompletedQuests[0].id);
+                        return true;
+                    }
+                    return false;
+                }
+            },
+            {
+                id: 'exp_boost',
+                name: '経験値ブースト',
+                description: '次回クエスト達成時の経験値が2倍になる（1回限り）',
+                price: 25,
+                icon: 'star',
+                type: 'consumable',
+                effect: () => {
+                    // 次回のクエスト達成時に経験値が2倍になる状態を追加
+                    // TODO: 実装
+                    return true;
+                }
+            },
+            {
+                id: 'streak_save',
+                name: '連続記録保護',
+                description: '1日分の連続記録を保護する（今日クエストを達成できなくても連続記録が途切れない）',
+                price: 40,
+                icon: 'shield',
+                type: 'consumable',
+                effect: () => {
+                    // 連続記録を保護する効果
+                    // TODO: 実装
+                    return true;
+                }
+            },
+            {
+                id: 'mass_reset',
+                name: 'リフレッシュ薬',
+                description: '今日の全クエストをリセットして再挑戦できるようにする',
+                price: 35,
+                icon: 'refresh',
+                type: 'consumable',
+                effect: () => {
+                    // すべてのクエストを未完了状態に戻す
+                    questsData = questsData.map(quest => ({...quest, completed: false}));
+                    saveData();
+                    renderQuests();
+                    updateUI();
+                    return true;
+                }
+            },
+            {
+                id: 'gold_doubler',
+                name: 'ゴールドの指輪',
+                description: 'クエスト達成時のゴールド獲得量が永続的に1.5倍になる',
+                price: 150,
+                icon: 'ring',
+                type: 'permanent',
+                effect: () => {
+                    // 永続的なゴールド増加効果
+                    return true;
+                }
+            },
+            {
+                id: 'exp_ring',
+                name: '知恵の指輪',
+                description: 'クエスト達成時の経験値獲得量が永続的に1.2倍になる',
+                price: 200,
+                icon: 'star',
+                type: 'permanent',
+                effect: () => {
+                    // 永続的な経験値増加効果
+                    return true;
+                }
+            },
+            {
+                id: 'health_max',
+                name: '体力強化のお守り',
+                description: '最大体力が20増加する',
+                price: 100,
+                icon: 'heart',
+                type: 'permanent',
+                effect: () => {
+                    // 最大体力増加効果
+                    userData.health += 20;
+                    saveData();
+                    updateUI();
+                    return true;
+                }
+            }
+        ];
+        
+        // データの保存と読み込み
+        function saveData() {
+            localStorage.setItem('dailyQuestUserData', JSON.stringify(userData));
+            localStorage.setItem('dailyQuests', JSON.stringify(questsData));
+        }
+        
+        function loadData() {
+            const savedUserData = localStorage.getItem('dailyQuestUserData');
+            const savedQuests = localStorage.getItem('dailyQuests');
+            
+            if (savedUserData) {
+                userData = JSON.parse(savedUserData);
+            }
+            
+            if (savedQuests) {
+                questsData = JSON.parse(savedQuests);
+            }
+            
+            // 日付が変わったらクエストをリセット
+            const lastDate = localStorage.getItem('lastDate');
+            const today = new Date().toDateString();
+            
+            if (lastDate !== today) {
+                // 日課クエストだけをリセット（単発クエストはそのまま）
+                questsData = questsData.map(quest => 
+                    quest.isOneTime ? quest : {...quest, completed: false}
+                );
+                localStorage.setItem('lastDate', today);
+                saveData();
+            }
+        }
+        
+        // クエスト名に基づいてGPとEXPを自動設定する関数
+        function calculateRewards(questName) {
+            let exp = 15; // デフォルト値
+            let gold = 5; // デフォルト値
+            
+            // 文字数による基本値の調整（長いクエスト名=より複雑なタスク？）
+            if (questName.length > 15) {
+                exp += 5;
+                gold += 2;
+            }
+            
+            // 特定のキーワードによる調整
+            const keywords = {
+                // 難易度系キーワード
+                "難しい": {exp: 10, gold: 5},
+                "大変": {exp: 8, gold: 4},
+                "挑戦": {exp: 7, gold: 3},
+                "簡単": {exp: -3, gold: -1},
+                
+                // 時間系キーワード
+                "30分": {exp: 5, gold: 2},
+                "1時間": {exp: 10, gold: 4},
+                "2時間": {exp: 15, gold: 6},
+                
+                // 活動系キーワード
+                "運動": {exp: 8, gold: 3},
+                "勉強": {exp: 7, gold: 2},
+                "読書": {exp: 5, gold: 2},
+                "瞑想": {exp: 4, gold: 1},
+                "掃除": {exp: 6, gold: 3},
+                "料理": {exp: 7, gold: 4},
+                
+                // 習慣系キーワード
+                "毎日": {exp: 3, gold: 1},
+                "週間": {exp: 5, gold: 2},
+                "ルーティン": {exp: 2, gold: 1}
+            };
+            
+            // キーワードがあればボーナスを加算
+            Object.keys(keywords).forEach(word => {
+                if (questName.includes(word)) {
+                    exp += keywords[word].exp;
+                    gold += keywords[word].gold;
+                }
+            });
+            
+            // 最小値と最大値の範囲内に収める
+            exp = Math.max(5, Math.min(exp, 50));
+            gold = Math.max(1, Math.min(gold, 20));
+            
+            return {exp, gold};
+        }
+        
+        // ***** UI操作関数 *****
+        
+        // モーダル表示/非表示
+        function toggleModal(modalId) {
+            const modal = document.getElementById(modalId);
+            if (modal.style.display === 'none') {
+                // モーダル表示前に必要なデータを更新
+                if (modalId === 'shop-modal') {
+                    document.getElementById('shop-gold').textContent = userData.gold;
+                    renderShopItems();
+                } else if (modalId === 'inventory-modal') {
+                    renderInventory();
+                } else if (modalId === 'rewards-modal') {
+                    document.getElementById('rewards-gold').textContent = userData.gold;
+                    renderRewards();
+                } else if (modalId === 'stats-modal') {
+                    renderStats();
+                } else if (modalId === 'achievements-modal') {
+                    renderAchievements();
+                }
+                
+                modal.style.display = 'flex';
+            } else {
+                modal.style.display = 'none';
+            }
+        }
+        
+        function closeModal(modalId) {
+            document.getElementById(modalId).style.display = 'none';
+        }
+        
+        // クエストを完了する
+        function completeQuest(questId) {
+            // 単発クエストかどうかを確認するための変数
+            let isOneTimeQuest = false;
+            let questTitle = "";
+            
+            // クエストを完了状態に
+            questsData = questsData.map(quest => {
+                if (quest.id === parseInt(questId) && !quest.completed) {
+                    const completedQuest = {...quest, completed: true};
+                    
+                    // 単発クエストの場合はフラグを立てる
+                    if (quest.isOneTime) {
+                        isOneTimeQuest = true;
+                        questTitle = quest.title;
+                    }
+                    
+                    // 完了モーダルを表示
+                    document.getElementById('completed-quest-title').textContent = completedQuest.title;
+                    document.getElementById('completed-exp').textContent = `+${completedQuest.exp} EXP`;
+                    document.getElementById('completed-gold').textContent = `+${completedQuest.gold} G`;
+                    toggleModal('complete-modal');
+                    
+                    // ユーザー情報更新
+                    const newExp = userData.exp + completedQuest.exp;
+                    const newGold = userData.gold + completedQuest.gold;
+                    let newLevel = userData.level;
+                    let leveledUp = false;
+                    
+                    // レベルアップ処理
+                    if (newExp >= userData.maxExp) {
+                        newLevel = userData.level + 1;
+                        leveledUp = true;
+                        
+                        // レベルアップモーダル表示準備
+                        document.getElementById('old-level').textContent = userData.level;
+                        document.getElementById('new-level').textContent = newLevel;
+                        
+                        // 少し遅延させてレベルアップモーダルを表示
+                        setTimeout(() => {
+                            toggleModal('level-up-modal');
+                        }, 1000);
+                    }
+                    
+                    // 統計情報の更新
+                    const today = new Date().toISOString().split('T')[0];
+                    
+                    // 日別達成数の更新
+                    if (!userData.stats.dailyCompletion[today]) {
+                        userData.stats.dailyCompletion[today] = 1;
+                    } else {
+                        userData.stats.dailyCompletion[today]++;
+                    }
+                    
+                    // クエスト別達成数の更新
+                    if (!userData.stats.questCompletion[completedQuest.title]) {
+                        userData.stats.questCompletion[completedQuest.title] = 1;
+                    } else {
+                        userData.stats.questCompletion[completedQuest.title]++;
+                    }
+                    
+                    // 称号チェック
+                    const totalCompleted = userData.totalCompletedQuests + 1;
+                    
+                    // 達成数に応じた称号
+                    const milestones = [
+                        {count: 1, title: "冒険者見習い", description: "最初のクエストを達成"},
+                        {count: 10, title: "一人前の冒険者", description: "10個のクエストを達成"},
+                        {count: 50, title: "熟練冒険者", description: "50個のクエストを達成"},
+                        {count: 100, title: "伝説の勇者", description: "100個のクエストを達成"}
+                    ];
+                    
+                    milestones.forEach(milestone => {
+                        if (totalCompleted >= milestone.count && 
+                            !userData.achievements.some(a => a.title === milestone.title)) {
+                            userData.achievements.push({
+                                title: milestone.title,
+                                description: milestone.description,
+                                date: new Date().toISOString()
+                            });
+                            
+                            // 称号獲得ボーナス
+                            newExp += 30;
+                            newGold += 15;
+                            
+                            // 称号獲得通知
+                            setTimeout(() => {
+                                alert(`🏆 新しい称号を獲得しました！\n「${milestone.title}」\n${milestone.description}`);
+                            }, 1500);
+                        }
+                    });
+                    
+                    // ユーザーデータ更新
+                    userData.exp = leveledUp ? newExp - userData.maxExp : newExp;
+                    userData.level = newLevel;
+                    userData.maxExp = leveledUp ? userData.maxExp + 50 : userData.maxExp;
+                    userData.gold = newGold;
+                    userData.totalCompletedQuests = totalCompleted;
+                    
+                    return completedQuest;
+                }
+                return quest;
+            });
+            
+            // 単発クエストの場合は、完了後にリストから削除
+            if (isOneTimeQuest) {
+                questsData = questsData.filter(q => !(q.isOneTime && q.completed));
+                
+                // メッセージを表示
+                setTimeout(() => {
+                    alert(`単発クエスト「${questTitle}」を完了しました！`);
+                }, 2000);
+            }
+            
+            saveData();
+            renderQuests();
+            updateUI();
+        }
+        
+        // クエストリストを描画
+        function renderQuests() {
+            // 時間帯ごとにフィルタリング
+            const morningQuests = questsData.filter(q => q.timeOfDay === "朝");
+            const dayQuests = questsData.filter(q => q.timeOfDay === "昼");
+            const nightQuests = questsData.filter(q => q.timeOfDay === "夜");
+            const allDayQuests = questsData.filter(q => q.timeOfDay === "一日中");
+            
+            // 各セクションをクリア
+            document.getElementById('morning-quests').innerHTML = '';
+            document.getElementById('day-quests').innerHTML = '';
+            document.getElementById('night-quests').innerHTML = '';
+            document.getElementById('all-day-quests').innerHTML = '';
+            
+            // 朝のクエスト描画
+            renderQuestGroup(morningQuests, 'morning-quests');
+            
+            // 昼のクエスト描画
+            renderQuestGroup(dayQuests, 'day-quests');
+            
+            // 夜のクエスト描画
+            renderQuestGroup(nightQuests, 'night-quests');
+            
+            // 一日中のクエスト描画
+            renderQuestGroup(allDayQuests, 'all-day-quests');
+        }
+        
+        // クエストグループを描画
+        function renderQuestGroup(quests, containerId) {
+            const container = document.getElementById(containerId);
+            
+            if (quests.length === 0) {
+                container.innerHTML = '<div class="p-3 text-center text-gray-500 text-sm">クエストがありません</div>';
+                return;
+            }
+            
+            quests.forEach(quest => {
+                const questElement = document.createElement('div');
+                questElement.className = `flex items-center p-3 border-b ${quest.completed ? 'bg-gray-100' : ''} ${quest.isOneTime ? 'one-time-quest' : ''}`;
+                
+                questElement.innerHTML = `
+                    <div class="${quest.completed ? 'bg-green-100 text-green-600' : 'bg-blue-100 text-blue-600'} w-8 h-8 rounded-full flex items-center justify-center mr-3">
+                        <i data-lucide="${quest.icon}" class="w-5 h-5"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h4 class="font-medium ${quest.completed ? 'line-through text-gray-500' : ''}">${quest.title}</h4>
+                        <div class="flex text-xs text-gray-500">
+                            <span class="flex items-center mr-2">
+                                <i data-lucide="star" class="w-3 h-3 text-yellow-500 mr-1"></i> ${quest.exp}EXP
+                            </span>
+                            <span class="flex items-center">
+                                <i data-lucide="trophy" class="w-3 h-3 text-yellow-500 mr-1"></i> ${quest.gold}G
+                            </span>
+                        </div>
+                    </div>
+                    <div class="${quest.completed ? 'bg-green-500 border-green-500' : 'border-gray-300'} w-6 h-6 rounded-full border-2 mr-2 cursor-pointer">
+                        ${quest.completed ? '<span class="text-white flex items-center justify-center h-full">✓</span>' : ''}
+                    </div>
+                    <button class="text-red-500 text-xs p-1">×</button>
+                `;
+                
+                // クエスト完了処理の追加
+                const completeBtn = questElement.querySelector('.rounded-full.border-2');
+                completeBtn.addEventListener('click', () => {
+                    if (!quest.completed) {
+                        completeQuest(quest.id);
+                    }
+                });
+                
+                // クエストタイトルエリアのクリックでも完了
+                const titleArea = questElement.querySelector('.flex-1');
+                titleArea.addEventListener('click', () => {
+                    if (!quest.completed) {
+                        completeQuest(quest.id);
+                    }
+                });
+                
+                // クエストアイコンのクリックでも完了
+                const iconArea = questElement.querySelector('.rounded-full.flex');
+                iconArea.addEventListener('click', () => {
+                    if (!quest.completed) {
+                        completeQuest(quest.id);
+                    }
+                });
+                
+                // 削除ボタンの処理
+                const deleteBtn = questElement.querySelector('button');
+                deleteBtn.addEventListener('click', () => {
+                    if (confirm(`クエスト「${quest.title}」を削除しますか？`)) {
+                        questsData = questsData.filter(q => q.id !== quest.id);
+                        saveData();
+                        renderQuests();
+                        updateUI();
+                    }
+                });
+                
+                container.appendChild(questElement);
+            });
+            
+            // アイコンを初期化
+            lucide.createIcons();
+        }
+        
+        // UI全体の更新
+        function updateUI() {
+            // メインUI更新
+            document.getElementById('gold-amount').textContent = userData.gold;
+            document.getElementById('streak-count').textContent = userData.streak;
+            document.getElementById('level-display').textContent = userData.level;
+            document.getElementById('level-number').textContent = userData.level;
+            document.getElementById('current-exp').textContent = userData.exp;
+            document.getElementById('max-exp').textContent = userData.maxExp;
+            document.getElementById('exp-bar').style.width = `${(userData.exp / userData.maxExp) * 100}%`;
+            document.getElementById('achievements-count').textContent = userData.achievements.length;
+            
+            // 完了率の計算と表示
+            const completedCount = questsData.filter(q => q.completed).length;
+            const totalCount = questsData.length;
+            const completionRate = totalCount > 0 ? Math.round((completedCount / totalCount) * 100) : 0;
+            
+            document.getElementById('completion-rate').textContent = `${completionRate}%`;
+            document.getElementById('completed-count').textContent = completedCount;
+            document.getElementById('remaining-count').textContent = totalCount - completedCount;
+            document.getElementById('total-completed').textContent = userData.totalCompletedQuests;
+            
+            // インベントリバッジ表示/非表示
+            const inventoryDisplay = document.getElementById('inventory-display');
+            if (userData.inventory.length > 0) {
+                inventoryDisplay.style.display = 'flex';
+                document.getElementById('inventory-count').textContent = userData.inventory.length;
+            } else {
+                inventoryDisplay.style.display = 'none';
+            }
+        }
+        
+        // ショップアイテムの描画
+        function renderShopItems() {
+            const consumableContainer = document.getElementById('consumable-items-container');
+            const permanentContainer = document.getElementById('permanent-items-container');
+            
+            consumableContainer.innerHTML = '';
+            permanentContainer.innerHTML = '';
+            
+            // 消費アイテム描画
+            shopItems.filter(item => item.type === 'consumable').forEach(item => {
+                const itemElement = document.createElement('div');
+                itemElement.className = 'bg-gray-100 p-3 rounded-lg mb-2 flex items-start';
+                
+                itemElement.innerHTML = `
+                    <div class="bg-blue-100 text-blue-800 p-2 rounded-full mr-3">
+                        <i data-lucide="activity" class="w-6 h-6"></i>
+                    </div>
+                    <div class="flex-1">
+                        <h5 class="font-bold">${item.name}</h5>
+                        <p class="text-sm text-gray-600 mb-2">${item.description}</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-yellow-600 font-bold flex items-center">
+                                <i data-lucide="trophy" class="w-3.5 h-3.5 mr-1"></i>
+                                ${item.price}G
+                            </span>
+                            <button 
+                                class="${userData.gold >= item.price ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-500'} px-3 py-1 rounded-lg text-sm"
+                                ${userData.gold < item.price ? 'disabled' : ''}
+                            >
+                                購入する
+                            </button>
+                        </div>
+                    </div>
+                `;
+                
+                // 購入ボタンの処理
+                const buyButton = itemElement.querySelector('button');
+                if (userData.gold >= item.price) {
+                    buyButton.addEventListener('click', () => {
+                        purchaseItem(item);
+                    });
+                }
+                
+                consumableContainer.appendChild(itemElement);
+            });
+            
+            // 永続アイテム描画
+            shopItems.filter(item => item.type === 'permanent').forEach(item => {
+                const alreadyOwned = userData.skills.some(skill => skill.id === item.id);
+                
+                const itemElement = document.createElement('div');
+                itemElement.className = `${alreadyOwned ? 'bg-gray-200' : 'bg-gray-100'} p-3 rounded-lg mb-2 flex items-start`;
+                
+                itemElement.innerHTML = `
+                    <div class="bg-purple-100 text-purple-800 p-2 rounded-full mr-3">
+                        <i data-lucide="star" class="w-6 h-6"></i>
+                    </div>
+                    <div class="flex-1">
+                        <div class="flex items-center">
+                            <h5 class="font-bold">${item.name}</h5>
+                            ${alreadyOwned ? '<span class="ml-2 text-xs bg-blue-100 text-blue-800 px-2 py-0.5 rounded-full">所持中</span>' : ''}
+                        </div>
+                        <p class="text-sm text-gray-600 mb-2">${item.description}</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-yellow-600 font-bold flex items-center">
+                                <i data-lucide="trophy" class="w-3.5 h-3.5 mr-1"></i>
+                                ${item.price}G
+                            </span>
+                            ${!alreadyOwned ? `
+                                <button 
+                                    class="${userData.gold >= item.price ? 'bg-green-500 text-white' : 'bg-gray-300 text-gray-500'} px-3 py-1 rounded-lg text-sm"
+                                    ${userData.gold < item.price ? 'disabled' : ''}
+                                >
+                                    購入する
+                                </button>
+                            ` : '<span class="text-xs text-gray-500">購入済み</span>'}
+                        </div>
+                    </div>
+                `;
+                
+                // 購入ボタンの処理
+                if (!alreadyOwned) {
+                    const buyButton = itemElement.querySelector('button');
+                    if (userData.gold >= item.price) {
+                        buyButton.addEventListener('click', () => {
+                            purchaseItem(item);
+                        });
+                    }
+                }
+                
+                permanentContainer.appendChild(itemElement);
+            });
+            
+            // アイコンを初期化
+            lucide.createIcons();
+        }
+        
+        // インベントリの描画
+        function renderInventory() {
+            const inventoryContainer = document.getElementById('inventory-container');
+            const skillsContainer = document.getElementById('skills-container');
+            
+            inventoryContainer.innerHTML = '';
+            skillsContainer.innerHTML = '';
+            
+            // インベントリアイテム描画
+            if (userData.inventory.length > 0) {
+                inventoryContainer.innerHTML = '<h4 class="font-bold text-lg mb-2">所持アイテム</h4>';
+                
+                userData.inventory.forEach((item, index) => {
+                    const itemElement = document.createElement('div');
+                    itemElement.className = 'bg-gray-100 p-3 rounded-lg mb-2';
+                    
+                    itemElement.innerHTML = `
+                        <h4 class="font-bold">${item.name}</h4>
+                        <p class="text-sm text-gray-600 mb-2">${item.description}</p>
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs text-gray-500">
+                                取得: ${new Date(item.purchaseDate).toLocaleDateString()}
+                            </span>
+                            <button class="bg-green-500 text-white text-sm px-3 py-1 rounded-lg">
+                                使用する
+                            </button>
+                        </div>
+                    `;
+                    
+                    // アイテム使用ボタンの処理
+                    const useButton = itemElement.querySelector('button');
+                    useButton.addEventListener('click', () => {
+                        useItem(item, index);
+                    });
+                    
+                    inventoryContainer.appendChild(itemElement);
+                });
+            } else {
+                inventoryContainer.innerHTML = `
+                    <div class="text-center text-gray-600 mb-4">
+                        <p>アイテムを所持していません。</p>
+                        <p>ショップでアイテムを購入しましょう！</p>
+                    </div>
+                `;
+            }
+            
+            // スキル一覧描画
+            if (userData.skills.length > 0) {
+                skillsContainer.innerHTML = '<h4 class="font-bold text-lg mb-2">習得済みスキル</h4><div class="bg-gray-100 p-3 rounded-lg"></div>';
+                const skillList = skillsContainer.querySelector('.rounded-lg');
+                
+                userData.skills.forEach((skill, index) => {
+                    const skillElement = document.createElement('div');
+                    skillElement.className = 'mb-2 pb-2 border-b border-gray-200 last:border-b-0 last:mb-0 last:pb-0';
+                    
+                    skillElement.innerHTML = `
+                        <div class="flex items-center">
+                            <i data-lucide="star" class="w-4 h-4 text-yellow-500 mr-2"></i>
+                            <h5 class="font-bold">${skill.name}</h5>
+                        </div>
+                        <p class="text-sm text-gray-600">${skill.description}</p>
+                    `;
+                    
+                    skillList.appendChild(skillElement);
+                });
+            }
+            
+            // アイコンを初期化
+            lucide.createIcons();
+        }
+        
+        // ご褒美の描画
+        function renderRewards() {
+            const availableContainer = document.getElementById('available-rewards-container');
+            const claimedContainer = document.getElementById('claimed-rewards-container');
+            
+            availableContainer.innerHTML = '';
+            claimedContainer.innerHTML = '';
+            
+            // 獲得可能なご褒美
+            const availableRewards = userData.rewards.filter(r => !r.redeemed);
+            if (availableRewards.length > 0) {
+                availableContainer.innerHTML = '<h4 class="font-bold text-lg mb-2">獲得できるご褒美</h4>';
+                
+                availableRewards.forEach(reward => {
+                    const rewardElement = document.createElement('div');
+                    rewardElement.className = 'bg-gray-100 p-3 rounded-lg mb-2';
+                    
+                    rewardElement.innerHTML = `
+                        <h5 class="font-bold">${reward.name}</h5>
+                        ${reward.description ? `<p class="text-sm text-gray-600 mb-2">${reward.description}</p>` : ''}
+                        <div class="flex justify-between items-center">
+                            <span class="text-yellow-600 font-bold flex items-center">
+                                <i data-lucide="trophy" class="w-3.5 h-3.5 mr-1"></i>
+                                ${reward.price}G
+                            </span>
+                            <button 
+                                class="${userData.gold >= reward.price ? 'bg-pink-500 text-white' : 'bg-gray-300 text-gray-500'} px-3 py-1 rounded-lg text-sm"
+                                ${userData.gold < reward.price ? 'disabled' : ''}
+                            >
+                                獲得する
+                            </button>
+                        </div>
+                    `;
+                    
+                    // 獲得ボタンの処理
+                    const claimButton = rewardElement.querySelector('button');
+                    if (userData.gold >= reward.price) {
+                        claimButton.addEventListener('click', () => {
+                            redeemReward(reward.id);
+                        });
+                    }
+                    
+                    availableContainer.appendChild(rewardElement);
+                });
+            } else {
+                availableContainer.innerHTML = `
+                    <div class="text-center text-gray-600 mb-4">
+                        <p>獲得できるご褒美がありません。</p>
+                        <p>新しいご褒美を追加しましょう！</p>
+                    </div>
+                `;
+            }
+            
+            // 獲得済みのご褒美
+            const claimedRewards = userData.rewards.filter(r => r.redeemed);
+            if (claimedRewards.length > 0) {
+                claimedContainer.innerHTML = '<h4 class="font-bold text-lg mb-2">獲得済みのご褒美</h4>';
+                
+                claimedRewards.forEach(reward => {
+                    const rewardElement = document.createElement('div');
+                    rewardElement.className = 'bg-gray-200 p-3 rounded-lg mb-2';
+                    
+                    rewardElement.innerHTML = `
+                        <h5 class="font-bold text-gray-600">${reward.name}</h5>
+                        ${reward.description ? `<p class="text-sm text-gray-500 mb-2">${reward.description}</p>` : ''}
+                        <div class="flex justify-between items-center">
+                            <span class="text-xs text-gray-500">
+                                獲得日: ${new Date(reward.redeemedAt).toLocaleDateString()}
+                            </span>
+                            <span class="bg-green-100 text-green-800 text-xs px-2 py-0.5 rounded-full">
+                                獲得済み
+                            </span>
+                        </div>
+                    `;
+                    
+                    claimedContainer.appendChild(rewardElement);
+                });
+            }
+            
+            // アイコンを初期化
+            lucide.createIcons();
+        }
+        
+        // 統計情報の描画
+        function renderStats() {
+            document.getElementById('stats-total-completed').textContent = userData.totalCompletedQuests;
+            document.getElementById('stats-achievements').textContent = userData.achievements.length;
+            document.getElementById('stats-level').textContent = userData.level;
+            
+            const questStatsContainer = document.getElementById('quest-stats-container');
+            const dailyStatsContainer = document.getElementById('daily-stats-container');
+            
+            questStatsContainer.innerHTML = '';
+            dailyStatsContainer.innerHTML = '';
+            
+            // クエスト別統計
+            const questCompletions = userData.stats.questCompletion;
+            if (Object.keys(questCompletions).length > 0) {
+                questStatsContainer.innerHTML = '<h4 class="font-bold text-lg mb-2">クエスト別達成回数</h4><div class="bg-gray-100 p-4 rounded-lg"></div>';
+                const questStatsList = questStatsContainer.querySelector('.rounded-lg');
+                
+                // 達成回数順にソート
+                const sortedQuests = Object.entries(questCompletions)
+                    .sort(([, a], [, b]) => b - a);
+                
+                sortedQuests.forEach(([questName, count]) => {
+                    const questElement = document.createElement('div');
+                    questElement.className = 'flex justify-between mb-2';
+                    questElement.innerHTML = `
+                        <span class="truncate mr-2">${questName}</span>
+                        <span class="font-bold">${count}回</span>
+                    `;
+                    questStatsList.appendChild(questElement);
+                });
+            }
+            
+            // 日別統計
+            const dailyCompletions = userData.stats.dailyCompletion;
+            if (Object.keys(dailyCompletions).length > 0) {
+                dailyStatsContainer.innerHTML = '<h4 class="font-bold text-lg mb-2">日別達成クエスト数</h4><div class="bg-gray-100 p-4 rounded-lg"></div>';
+                const dailyStatsList = dailyStatsContainer.querySelector('.rounded-lg');
+                
+                // 日付順にソート（新しい順）
+                const sortedDays = Object.entries(dailyCompletions)
+                    .sort(([dateA], [dateB]) => new Date(dateB) - new Date(dateA));
+                
+                sortedDays.forEach(([date, count]) => {
+                    const dayElement = document.createElement('div');
+                    dayElement.className = 'flex justify-between mb-2';
+                    dayElement.innerHTML = `
+                        <span>${new Date(date).toLocaleDateString()}</span>
+                        <span class="font-bold">${count}クエスト</span>
+                    `;
+                    dailyStatsList.appendChild(dayElement);
+                });
+            }
+        }
+        
+        // 称号一覧の描画
+        function renderAchievements() {
+            const achievementsContainer = document.getElementById('achievements-container');
+            achievementsContainer.innerHTML = '';
+            
+            if (userData.achievements.length > 0) {
+                userData.achievements.forEach((achievement, index) => {
+                    const achievementElement = document.createElement('div');
+                    achievementElement.className = 'bg-gray-100 p-4 rounded-lg mb-2';
+                    
+                    achievementElement.innerHTML = `
+                        <div class="flex items-center mb-1">
+                            <i data-lucide="star" class="w-4 h-4 text-yellow-500 mr-2"></i>
+                            <h4 class="font-bold">${achievement.title}</h4>
+                        </div>
+                        <p class="text-sm text-gray-600 mb-1">${achievement.description}</p>
+                        <p class="text-xs text-gray-500">
+                            獲得日: ${new Date(achievement.date).toLocaleDateString()}
+                        </p>
+                    `;
+                    
+                    achievementsContainer.appendChild(achievementElement);
+                });
+            } else {
+                achievementsContainer.innerHTML = `
+                    <div class="text-center text-gray-600 mb-6">
+                        <p>まだ称号を獲得していません。</p>
+                        <p>クエストを達成して称号を手に入れましょう！</p>
+                    </div>
+                `;
+            }
+            
+            // アイコンを初期化
+            lucide.createIcons();
+        }
+        
+        // ***** ユーザーアクション関数 *****
+        
+        // クエストタイプの選択（日課 or 単発）
+        let isOneTime = false; // 詳細設定での単発クエストフラグ
+        function selectQuestType(type) {
+            const dailyOption = document.getElementById('daily-quest-option');
+            const oneTimeOption = document.getElementById('one-time-quest-option');
+            
+            if (type === 'daily') {
+                dailyOption.className = 'flex-1 p-3 rounded-lg border cursor-pointer flex items-center justify-center bg-blue-100 border-blue-500';
+                oneTimeOption.className = 'flex-1 p-3 rounded-lg border cursor-pointer flex items-center justify-center bg-gray-100 border-gray-300';
+                isOneTime = false;
+            } else {
+                dailyOption.className = 'flex-1 p-3 rounded-lg border cursor-pointer flex items-center justify-center bg-gray-100 border-gray-300';
+                oneTimeOption.className = 'flex-1 p-3 rounded-lg border cursor-pointer flex items-center justify-center bg-purple-100 border-purple-500';
+                isOneTime = true;
+            }
+        }
+        
+        // クイック追加でのクエストタイプ選択
+        let isQuickOneTime = false; // クイック追加での単発クエストフラグ
+        function selectQuickQuestType(type) {
+            const dailyOption = document.getElementById('quick-daily-option');
+            const oneTimeOption = document.getElementById('quick-one-time-option');
+            
+            if (type === 'daily') {
+                dailyOption.className = 'flex-1 p-3 rounded-lg border cursor-pointer flex items-center justify-center bg-blue-100 border-blue-500';
+                oneTimeOption.className = 'flex-1 p-3 rounded-lg border cursor-pointer flex items-center justify-center bg-gray-100 border-gray-300';
+                isQuickOneTime = false;
+            } else {
+                dailyOption.className = 'flex-1 p-3 rounded-lg border cursor-pointer flex items-center justify-center bg-gray-100 border-gray-300';
+                oneTimeOption.className = 'flex-1 p-3 rounded-lg border cursor-pointer flex items-center justify-center bg-purple-100 border-purple-500';
+                isQuickOneTime = true;
+            }
+        }
+        
+        // 手動報酬設定のトグル
+        function toggleManualRewards() {
+            const manualRewardsSection = document.getElementById('manual-rewards-section');
+            const checkbox = document.getElementById('manual-rewards');
+            
+            if (checkbox.checked) {
+                manualRewardsSection.style.display = 'grid';
+            } else {
+                manualRewardsSection.style.display = 'none';
+            }
+        }
+        
+        // 新しいクエストを追加
+        function addNewQuest() {
+            const title = document.getElementById('quest-title').value.trim();
+            if (title === '') {
+                alert('クエスト名を入力してください');
+                return;
+            }
+            
+            const timeOfDay = document.getElementById('quest-time').value;
+            const icon = document.getElementById('quest-icon').value;
+            const manualRewards = document.getElementById('manual-rewards').checked;
+            
+            let exp = 0;
+            let gold = 0;
+            
+            if (manualRewards) {
+                exp = parseInt(document.getElementById('quest-exp').value) || 15;
+                gold = parseInt(document.getElementById('quest-gold').value) || 5;
+            }
+            
+            // 新しいクエストIDの生成
+            const questId = questsData.length > 0 ? Math.max(...questsData.map(q => q.id)) + 1 : 1;
+            
+            // 報酬が0の場合は自動計算する
+            if (exp === 0 && gold === 0) {
+                const rewards = calculateRewards(title);
+                exp = rewards.exp;
+                gold = rewards.gold;
+                
+                // 単発クエストの場合はボーナスを追加
+                if (isOneTime) {
+                    exp = Math.round(exp * 1.5); // 50%増し
+                    gold = Math.round(gold * 1.3); // 30%増し
+                }
+            }
+            
+            const newQuest = {
+                id: questId,
+                title: title,
+                icon: icon,
+                completed: false,
+                exp: exp,
+                gold: gold,
+                timeOfDay: timeOfDay,
+                isOneTime: isOneTime
+            };
+            
+            questsData.push(newQuest);
+            saveData();
+            renderQuests();
+            updateUI();
+            
+            // フォームをリセット
+            document.getElementById('quest-title').value = '';
+            document.getElementById('quest-time').value = '朝';
+            document.getElementById('quest-icon').value = 'star';
+            document.getElementById('manual-rewards').checked = false;
+            document.getElementById('quest-exp').value = '15';
+            document.getElementById('quest-gold').value = '5';
+            document.getElementById('manual-rewards-section').style.display = 'none';
+            
+            // モーダルを閉じる
+            closeModal('add-quest-modal');
+        }
+        
+        // クイック追加でクエストを追加
+        function addQuickQuest() {
+            const title = document.getElementById('quick-quest-title').value.trim();
+            if (title === '') {
+                alert('クエスト名を入力してください');
+                return;
+            }
+            
+            const timeOfDay = document.getElementById('quick-quest-time').value;
+            
+            // 新しいクエストIDの生成
+            const questId = questsData.length > 0 ? Math.max(...questsData.map(q => q.id)) + 1 : 1;
+            
+            // 報酬の自動計算
+            const rewards = calculateRewards(title);
+            let exp = rewards.exp;
+            let gold = rewards.gold;
+            
+            // 単発クエストの場合はボーナスを追加
+            if (isQuickOneTime) {
+                exp = Math.round(exp * 1.5); // 50%増し
+                gold = Math.round(gold * 1.3); // 30%増し
+            }
+            
+            const newQuest = {
+                id: questId,
+                title: title,
+                icon: 'star', // デフォルトアイコン
+                completed: false,
+                exp: exp,
+                gold: gold,
+                timeOfDay: timeOfDay,
+                isOneTime: isQuickOneTime
+            };
+            
+            questsData.push(newQuest);
+            saveData();
+            renderQuests();
+            updateUI();
+            
+            // フォームをリセット
+            document.getElementById('quick-quest-title').value = '';
+            
+            // モーダルを閉じる
+            closeModal('quick-add-modal');
+        }
+        
+        // アイテムを購入
+        function purchaseItem(item) {
+            // ゴールドが足りるかチェック
+            if (userData.gold < item.price) {
+                alert('ゴールドが足りません！');
+                return;
+            }
+            
+            // ゴールドを減らす
+            userData.gold -= item.price;
+            
+            // アイテムタイプに応じた処理
+            if (item.type === 'consumable') {
+                // 消費アイテムの場合、インベントリに追加
+                userData.inventory.push({
+                    ...item,
+                    purchaseDate: new Date().toISOString()
+                });
+            } else if (item.type === 'permanent') {
+                // 永続アイテムの場合、スキルに追加
+                // すでに持っている場合は購入できない
+                if (userData.skills.some(s => s.id === item.id)) {
+                    alert('すでに所持しているアイテムです！');
+                    return;
+                }
+                
+                userData.skills.push({
+                    ...item,
+                    purchaseDate: new Date().toISOString()
+                });
+            }
+            
+            // データを保存して画面更新
+            saveData();
+            updateUI();
+            
+            // ショップの表示を更新
+            document.getElementById('shop-gold').textContent = userData.gold;
+            renderShopItems();
+            
+            // 成功メッセージ
+            alert(`「${item.name}」を購入しました！`);
+        }
+        
+        // アイテムを使用
+        function useItem(item, index) {
+            // アイテムの効果を実行
+            const effectResult = item.effect();
+            
+            if (effectResult) {
+                // 効果が適用できた場合、インベントリからアイテムを削除
+                userData.inventory.splice(index, 1);
+                
+                // データを保存して画面更新
+                saveData();
+                updateUI();
+                
+                // インベントリの表示を更新
+                renderInventory();
+                
+                // 成功メッセージ
+                alert(`「${item.name}」を使用しました！`);
+                
+                // モーダルを閉じる
+                closeModal('inventory-modal');
+            } else {
+                alert('アイテムを使用できませんでした。条件を満たしていません。');
+            }
+        }
+        
+        // ご褒美を追加
+        function addReward() {
+            const name = document.getElementById('reward-name').value.trim();
+            if (name === '') {
+                alert('ご褒美の名前を入力してください');
+                return;
+            }
+            
+            const description = document.getElementById('reward-description').value.trim();
+            const price = parseInt(document.getElementById('reward-price').value) || 50;
+            
+            if (price <= 0) {
+                alert('価格は1G以上に設定してください');
+                return;
+            }
+            
+            const newReward = {
+                id: `reward_${new Date().getTime()}`,
+                name: name,
+                description: description,
+                price: price,
+                createdAt: new Date().toISOString(),
+                redeemed: false
+            };
+            
+            userData.rewards.push(newReward);
+            saveData();
+            
+            // フォームをリセット
+            document.getElementById('reward-name').value = '';
+            document.getElementById('reward-description').value = '';
+            document.getElementById('reward-price').value = '50';
+            
+            // モーダルを閉じる
+            closeModal('add-reward-modal');
+            
+            // ご褒美画面を更新
+            renderRewards();
+        }
+        
+        // ご褒美を獲得（ゴールドを使用）
+        function redeemReward(rewardId) {
+            const reward = userData.rewards.find(r => r.id === rewardId);
+            
+            if (!reward) return;
+            
+            // ゴールドが足りるかチェック
+            if (userData.gold < reward.price) {
+                alert('ゴールドが足りません！');
+                return;
+            }
+            
+            // ユーザーからゴールドを引き、ご褒美を獲得済みにマーク
+            userData.gold -= reward.price;
+            
+            // ご褒美を獲得済みに更新
+            userData.rewards = userData.rewards.map(r => 
+                r.id === rewardId ? {...r, redeemed: true, redeemedAt: new Date().toISOString()} : r
+            );
+            
+            // データを保存して画面更新
+            saveData();
+            updateUI();
+            
+            // ご褒美画面を更新
+            document.getElementById('rewards-gold').textContent = userData.gold;
+            renderRewards();
+            
+            // 成功メッセージ
+            alert(`おめでとうございます！「${reward.name}」を獲得しました！\n\n現実世界でこのご褒美を楽しんでください！`);
+        }
+        
+        // アプリの初期化
+        function initApp() {
+            // データの読み込み
+            loadData();
+            
+            // クエストの描画
+            renderQuests();
+            
+            // UI全体の更新
+            updateUI();
+            
+            // アイコンを初期化
+            lucide.createIcons();
+        }
+        
+        // アプリの初期化を実行
+        window.onload = initApp;
+    </script>
+</body>
+</html>
